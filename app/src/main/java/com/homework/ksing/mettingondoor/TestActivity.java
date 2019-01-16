@@ -19,6 +19,7 @@ import com.arcsoft.face.ErrorInfo;
 import com.arcsoft.face.FaceEngine;
 import com.arcsoft.face.FaceFeature;
 import com.arcsoft.face.FaceInfo;
+import com.arcsoft.face.FaceSimilar;
 import com.arcsoft.face.VersionInfo;
 import com.homework.ksing.mettingondoor.common.Constants;
 import com.homework.ksing.mettingondoor.util.camera.CameraHelper;
@@ -40,7 +41,6 @@ public class TestActivity extends Activity {
     private static final String TAG = "TestActivity";
     private CameraHelper cameraHelper;
     private Camera.Size previewSize;
-    //private int processMask = FaceEngine.ASF_AGE | FaceEngine.ASF_FACE3DANGLE | FaceEngine.ASF_GENDER | FaceEngine.ASF_LIVENESS;
     private int processMask = FaceEngine.ASF_FACE_RECOGNITION | FaceEngine.ASF_FACE_DETECT | FaceEngine.ASF_AGE | FaceEngine.ASF_GENDER | FaceEngine.ASF_FACE3DANGLE | FaceEngine.ASF_LIVENESS;
     private Integer cameraID = Camera.CameraInfo.CAMERA_FACING_FRONT;
     private TextureView previewView ;//相机预览显示控件
@@ -147,6 +147,7 @@ public class TestActivity extends Activity {
 
     private byte[] faceFeatureData; //存储人脸特征值数据
 
+
     private void initCamera() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -158,28 +159,26 @@ public class TestActivity extends Activity {
                 previewSize = camera.getParameters().getPreviewSize();
             }
 
-
             @Override
             public void onPreview(byte[] nv21, Camera camera) {
                 List<FaceInfo> faceInfoList = new ArrayList<>();
                 int code = faceEngine.detectFaces(nv21, previewSize.width, previewSize.height, FaceEngine.CP_PAF_NV21, faceInfoList);
+                Log.i("code", "code:"+code);
                 if (code == ErrorInfo.MOK && faceInfoList.size() > 0) {
-                    Log.i("faceInfoList.get(0)", "faceInfoList.get(0): "+faceInfoList.get(0).toString());
-
                     FaceFeature faceFeatures = new FaceFeature();
-                    int extractFaceFeatureCodes;
                     //从图片解析出人脸特征数据
-                    long frStartTime = System.currentTimeMillis();
-                    extractFaceFeatureCodes = faceEngine.extractFaceFeature(nv21, previewSize.width, previewSize.height, FaceEngine.CP_PAF_NV21, faceInfoList.get(0), faceFeatures);
-                    Log.i("特征值提取: ", "error:"+extractFaceFeatureCodes);
+                    int extractFaceFeatureCodes = faceEngine.extractFaceFeature(nv21, previewSize.width, previewSize.height, FaceEngine.CP_PAF_NV21, faceInfoList.get(0), faceFeatures);
                     if(extractFaceFeatureCodes == ErrorInfo.MOK) {
                         faceFeatureData = faceFeatures.getFeatureData();
                         System.out.print("特征值:");
                         System.out.println(bytesToHex(faceFeatureData));
-                        /*截图功能*/
-//                        Bitmap bitmap=previewView.getBitmap();
-//                        getFile(bitmap);
-//                        System.exit(0);
+
+                        FaceFeature f = new FaceFeature(faceFeatureData);
+                        FaceSimilar faceSimilar = new FaceSimilar();//存储人脸相似度信息
+                        int compareErrCode = faceEngine.compareFaceFeature(faceFeatures, f, faceSimilar);
+                        if(compareErrCode == ErrorInfo.MOK) {
+                            Log.i("相似度", "相似度:" + faceSimilar.getScore());
+                        }
                         return;
                     }
                 }else {
